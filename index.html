@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BodyFlow Calisthenics - Minimal</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a consistent, vibrant accent color */
+        :root {
+            --accent-color: #4DE80B; /* Neon Green */
+            --dark-bg: #121212;
+            --card-bg: #1E1E1E;
+            --text-light: #FAFAFA;
+            --text-subtle: #A0A0A0;
+        }
+
+        /* Custom styles for the minimalist, dark 'flow' feel */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .flow-card-container {
+            background-color: var(--card-bg);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); /* Deep shadow for contrast */
+            transition: all 0.3s ease-in-out;
+        }
+        
+        /* Smooth transitions for interactive elements */
+        .level-button, .focus-card, .action-button, .secondary-button {
+            transition: all 0.2s ease-out;
+            border-width: 2px;
+        }
+
+        /* Level Button Styles (Minimalist Look) */
+        .level-button {
+            background-color: transparent;
+            border: 2px solid var(--text-subtle);
+            color: var(--text-light);
+        }
+        .level-button:hover {
+            border-color: var(--accent-color);
+            transform: scale(1.01);
+            box-shadow: 0 0 15px rgba(77, 232, 11, 0.4);
+        }
+
+        /* Focus Card Styles (Minimalist Look) */
+        .focus-card {
+            background-color: var(--card-bg);
+            border: 2px solid var(--text-subtle);
+            color: var(--text-light);
+            cursor: pointer;
+        }
+        .focus-card:hover {
+            border-color: var(--accent-color);
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(77, 232, 11, 0.4);
+        }
+        
+        /* Primary Action Button Style */
+        .action-button {
+            background-color: var(--accent-color);
+            color: var(--dark-bg);
+            font-weight: 800;
+        }
+        .action-button:hover {
+            background-color: #5eff15;
+            transform: translateY(-1px);
+        }
+        
+        /* Secondary Action Button Style */
+        .secondary-button {
+            background-color: transparent;
+            color: var(--text-subtle);
+            border: 2px solid var(--text-subtle);
+        }
+        .secondary-button:hover {
+            color: var(--text-light);
+            border-color: var(--text-light);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Rest Timer Specific Styles */
+        #rest-timer-display {
+            line-height: 1; /* Keep text compact */
+            text-shadow: 0 0 10px rgba(77, 232, 11, 0.7); /* Subtle glow on the timer */
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="app" class="w-full max-w-lg p-0 sm:p-0">
+    <!-- Main Application Card -->
+    <div class="flow-card-container rounded-xl p-6 md:p-10 w-full">
+        <h1 id="main-title" class="text-3xl font-extrabold text-white mb-8 text-center">BodyFlow</h1>
+        
+        <!-- Content Area -->
+        <div id="content-view">
+            <!-- Content will be rendered here by JavaScript -->
+        </div>
+
+        <!-- Message Box (Used instead of alert) -->
+        <div id="message-box" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+            <div class="bg-gray-800 p-8 rounded-lg max-w-sm w-full shadow-2xl border border-gray-700">
+                <p id="message-text" class="text-white text-lg font-semibold mb-6"></p>
+                <button onclick="hideMessage()" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg action-button">
+                    Awesome!
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Constants ---
+    const DEFAULT_REST_TIME = 60; // seconds
+
+    // --- Routine Data Structure (Level -> Focus -> Exercises) ---
+    const allRoutines = {
+        beginner: {
+            name: "Beginner Flow (Foundations)",
+            color: 'green',
+            focuses: [
+                {
+                    id: 'upper',
+                    name: "Upper Body Focus",
+                    description: "Chest, Back, Shoulders, Arms basics.",
+                    icon: '💪',
+                    exercises: [
+                        { name: "Incline Push-ups", reps: "3 Sets of 10-15 (on wall/counter)", target: "Chest, Shoulders" },
+                        { name: "Doorway Rows", reps: "3 Sets of 10-15", target: "Back, Biceps" },
+                        { name: "Knee Planks", reps: "3 Sets of 45 sec Hold", target: "Core Stability" }
+                    ]
+                },
+                {
+                    id: 'lower',
+                    name: "Lower Body & Core",
+                    description: "Legs, Glutes, Deep Core work.",
+                    icon: '🧘',
+                    exercises: [
+                        { name: "Bodyweight Squats", reps: "3 Sets of 15-20", target: "Legs, Glutes" },
+                        { name: "Glute Bridges", reps: "3 Sets of 15", target: "Glutes, Lower Back" },
+                        { name: "Reverse Lunges", reps: "3 Sets of 10 per leg", target: "Quads, Glutes" }
+                    ]
+                }
+            ]
+        },
+        intermediate: {
+            name: "Intermediate Flow (Strength)",
+            color: 'blue',
+            focuses: [
+                {
+                    id: 'push_core',
+                    name: "Push & Core",
+                    description: "Full Push-up strength and midline stability.",
+                    icon: '🤸',
+                    exercises: [
+                        { name: "Full Push-ups", reps: "3 Sets of 10-15", target: "Chest, Triceps, Core" },
+                        { name: "Tricep Dips", reps: "3 Sets of 10-15", target: "Triceps, Chest" },
+                        { name: "Hollow Body Hold", reps: "3 Sets of 45-60 sec Hold", target: "Full Core Strength" }
+                    ]
+                },
+                {
+                    id: 'pull_legs',
+                    name: "Pull & Leg Power",
+                    description: "Back muscle development and explosive legs.",
+                    icon: '🏃',
+                    exercises: [
+                        { name: "Table/Australian Rows", reps: "3 Sets of 10-15", target: "Back, Biceps" },
+                        { name: "Walking Lunges", reps: "3 Sets of 10-12 per leg", target: "Quads, Glutes, Balance" },
+                        { name: "Plank to Push-up", reps: "3 Sets of 10", target: "Core, Shoulders" }
+                    ]
+                }
+            ]
+        },
+        advanced: {
+            name: "Advanced Flow (Skill & Power)",
+            color: 'red',
+            focuses: [
+                {
+                    id: 'skills',
+                    name: "Skill & Stability",
+                    description: "Single-leg and handstand preparation.",
+                    icon: '🧘',
+                    exercises: [
+                        { name: "Pike Push-ups", reps: "3 Sets of 8-12", target: "Shoulders, Upper Chest" },
+                        { name: "Assisted Pistol Squats", reps: "3 Sets of 5-8 per leg", target: "Single-Leg Strength" },
+                        { name: "L-Sit Tucks", reps: "3 Sets of 30-45 sec Hold", target: "Hip Flexors, Deep Core" }
+                    ]
+                },
+                {
+                    id: 'power',
+                    name: "Explosive Power",
+                    description: "Full-body conditioning and advanced movement.",
+                    icon: '🔥',
+                    exercises: [
+                        { name: "Burpees", reps: "3 Sets of 10-15 (Fast, Explosive)", target: "Full Body Cardio Flow" },
+                        { name: "Archer Push-ups", reps: "3 Sets of 5-8 per arm", target: "Chest, Stability" },
+                        { name: "Squat Jumps", reps: "3 Sets of 15", target: "Leg Power, Conditioning" }
+                    ]
+                }
+            ]
+        }
+    };
+
+    // --- Progression Data (Illustrative Library) ---
+    const progressions = [
+        {
+            skill: "Pushing",
+            target: "Handstand Push-up",
+            steps: ["Wall Push-ups", "Incline Push-ups", "Knee Push-ups", "Full Push-ups", "Pike Push-ups", "Decline Pike Push-ups", "Wall HSPU Negatives"]
+        },
+        {
+            skill: "Pulling",
+            target: "Muscle-up",
+            steps: ["Doorway/Table Rows", "Australian Rows", "Pull-up Negatives", "Scapular Pulls", "Standard Pull-ups", "Chest-to-Bar Pull-ups", "Straight Bar Dips"]
+        },
+        {
+            skill: "Core",
+            target: "L-Sit / V-Sit",
+            steps: ["Knee Tucks (floor)", "Leg Raises (seated)", "Tuck Hold (on parallel bars)", "Single-Leg Extend", "L-Sit Hold", "V-Sit Holds"]
+        }
+    ];
+
+    // --- State Variables ---
+    let currentLevelId = null;
+    let currentFocusId = null;
+    let currentExerciseIndex = 0;
+    let currentWorkoutData = [];
+    let restIntervalId = null; // New state for the rest timer interval
+    let remainingRestTime = 0; // New state for tracking rest time
+
+    // --- DOM Elements ---
+    const contentView = document.getElementById('content-view');
+    const mainTitle = document.getElementById('main-title');
+    const messageBox = document.getElementById('message-box');
+    const messageText = document.getElementById('message-text');
+
+    // --- Utility Functions ---
+
+    /**
+     * Shows a custom message box instead of using alert().
+     */
+    function showMessage(message) {
+        messageText.textContent = message;
+        messageBox.classList.remove('hidden');
+    }
+
+    function hideMessage() {
+        messageBox.classList.add('hidden');
+    }
+
+    // --- Rest Timer Functions ---
+
+    /**
+     * Stops any running rest timer.
+     */
+    function stopRest() {
+        if (restIntervalId) {
+            clearInterval(restIntervalId);
+            restIntervalId = null;
+        }
+    }
+
+    /**
+     * Starts the rest timer countdown and updates the display.
+     */
+    function startRest(seconds) {
+        stopRest(); // Ensure any previous timer is stopped
+        remainingRestTime = seconds;
+        renderRestScreen();
+        
+        const restDisplay = document.getElementById('rest-timer-display');
+        if (!restDisplay) return; // Guard against navigation during rest
+
+        restIntervalId = setInterval(() => {
+            remainingRestTime--;
+            
+            // Update the display
+            restDisplay.textContent = remainingRestTime < 10 ? `0${remainingRestTime}` : remainingRestTime;
+
+            if (remainingRestTime <= 0) {
+                stopRest();
+                // Check if there are more exercises or if the workout is complete
+                if (currentExerciseIndex < currentWorkoutData.length) {
+                    // Automatically transition to the next exercise
+                    renderCurrentExercise();
+                } else {
+                    // This handles the case if the rest timer was the last step
+                    finishWorkout();
+                }
+            }
+        }, 1000);
+    }
+    
+    /**
+     * Renders the dedicated rest screen UI.
+     */
+    function renderRestScreen() {
+        const focusData = allRoutines[currentLevelId].focuses.find(f => f.id === currentFocusId);
+        const nextExerciseName = currentExerciseIndex < currentWorkoutData.length 
+            ? currentWorkoutData[currentExerciseIndex].name : "Workout Complete";
+
+        mainTitle.textContent = "REST & RECOVER";
+
+        contentView.innerHTML = `
+            <p class="text-center text-gray-500 mb-4 text-lg font-medium">Next Up:</p>
+
+            <!-- Next Exercise Preview -->
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 text-center mb-12">
+                <h3 class="text-2xl font-bold text-white">${nextExerciseName}</h3>
+            </div>
+
+            <div class="text-center mb-10">
+                <p class="text-4xl font-extrabold text-gray-500 mb-2">FLOW TIMER</p>
+                <!-- Timer Display - Massive and Neon Green -->
+                <h2 id="rest-timer-display" class="text-8xl font-black text-[--accent-color]">
+                    ${remainingRestTime < 10 ? `0${remainingRestTime}` : remainingRestTime}
+                </h2>
+            </div>
+            
+            <!-- Flow Buttons -->
+            <div class="mt-10 space-y-4">
+                <button onclick="skipRest()" class="action-button w-full py-4 text-xl rounded-lg shadow-xl">
+                    SKIP REST (Ready Now)
+                </button>
+                <button onclick="stopRest(); renderLevelSelection()" class="w-full py-3 font-semibold rounded-lg secondary-button">
+                    Exit Routine
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Skips the rest timer and immediately progresses to the next step.
+     */
+    function skipRest() {
+        stopRest();
+        if (currentExerciseIndex < currentWorkoutData.length) {
+            renderCurrentExercise();
+        } else {
+            finishWorkout();
+        }
+    }
+
+    // --- Flow Navigation Functions ---
+
+    /**
+     * Finishes the workout and shows the completion message.
+     */
+    function finishWorkout() {
+        const levelData = allRoutines[currentLevelId];
+        const focusData = levelData.focuses.find(f => f.id === currentFocusId);
+        showMessage(`🎉 Flow Complete! 🎉\nYou crushed the ${levelData.name} - ${focusData.name} routine. Time to recover!`);
+        renderLevelSelection();
+    }
+
+
+    /**
+     * Renders the main level selection screen.
+     */
+    function renderLevelSelection() {
+        stopRest(); // Stop timer if navigating back
+        currentLevelId = null;
+        currentFocusId = null;
+        currentWorkoutData = [];
+        mainTitle.textContent = "BodyFlow";
+        
+        contentView.innerHTML = `
+            <p class="text-center text-gray-400 mb-8 text-lg font-medium">Step 1: Choose Your Calisthenics Level</p>
+            
+            <!-- Level Cards with Minimalist Styling -->
+            <div class="space-y-4">
+                <button onclick="selectLevel('beginner')" class="level-button w-full py-4 font-extrabold text-xl rounded-lg shadow-md flex items-center justify-between px-6">
+                    <span>BEGINNER</span>
+                    <span class="text-sm font-semibold text-green-400">Foundations</span>
+                </button>
+                <button onclick="selectLevel('intermediate')" class="level-button w-full py-4 font-extrabold text-xl rounded-lg shadow-md flex items-center justify-between px-6">
+                    <span>INTERMEDIATE</span>
+                    <span class="text-sm font-semibold text-blue-400">Strength</span>
+                </button>
+                <button onclick="selectLevel('advanced')" class="level-button w-full py-4 font-extrabold text-xl rounded-lg shadow-md flex items-center justify-between px-6">
+                    <span>ADVANCED</span>
+                    <span class="text-sm font-semibold text-red-400">Skill & Power</span>
+                </button>
+            </div>
+
+            <!-- New: Progression Library Button -->
+            <button onclick="renderProgressionLibrary()" class="secondary-button w-full mt-8 py-3 font-semibold rounded-lg">
+                VIEW PROGRESSIONS
+            </button>
+
+            <p class="text-xs text-center text-gray-600 mt-10">Select the level you feel most comfortable with.</p>
+        `;
+    }
+    
+    /**
+     * Renders the Progression Library screen.
+     */
+    function renderProgressionLibrary() {
+        mainTitle.textContent = "Skill Progression Library";
+
+        const progressionList = progressions.map(p => `
+            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg">
+                <h3 class="text-xl font-extrabold text-[--accent-color]">${p.skill} Flow</h3>
+                <p class="text-sm text-gray-400 mb-3">Goal: ${p.target}</p>
+                <ol class="list-inside text-white space-y-1 text-sm">
+                    ${p.steps.map((step, index) => `<li class="ml-2">${index + 1}. ${step}</li>`).join('')}
+                </ol>
+            </div>
+        `).join('<div class="h-6"></div>'); // Spacing between progressions
+
+        contentView.innerHTML = `
+            <p class="text-center text-gray-400 mb-6 text-lg font-medium">Calisthenics is a journey of skills.</p>
+
+            <div class="space-y-4 mb-8">
+                ${progressionList}
+            </div>
+
+            <button onclick="renderLevelSelection()" class="w-full py-3 font-semibold rounded-lg secondary-button">
+                <-- Back to Main
+            </button>
+        `;
+    }
+
+
+    /**
+     * Selects the level and moves to the focus selection screen.
+     * @param {string} levelId - 'beginner', 'intermediate', or 'advanced'.
+     */
+    function selectLevel(levelId) {
+        currentLevelId = levelId;
+        renderFocusSelection();
+    }
+
+    /**
+     * Renders the focus selection screen (Step 2).
+     */
+    function renderFocusSelection() {
+        if (!currentLevelId) return renderLevelSelection();
+        stopRest(); 
+
+        const levelData = allRoutines[currentLevelId];
+
+        mainTitle.textContent = levelData.name;
+
+        // Create the focus cards dynamically
+        const focusCards = levelData.focuses.map(focus => `
+            <div onclick="startRoutine('${focus.id}')" 
+                 class="focus-card p-6 rounded-xl border-2 border-gray-700 hover:border-green-400">
+                <div class="flex items-center space-x-4">
+                    <span class="text-4xl">${focus.icon}</span>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">${focus.name}</h2>
+                        <p class="text-sm text-gray-400 mt-1">${focus.description}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        contentView.innerHTML = `
+            <p class="text-center text-gray-400 mb-6 text-lg font-medium">Step 2: Choose Your Training Focus</p>
+
+            <div class="mb-6 p-3 rounded-lg text-white bg-gray-800 text-center font-semibold text-sm border-l-4 border-l-[--accent-color]">
+                Level Selected: ${levelData.name}
+            </div>
+
+            <div class="space-y-4">
+                ${focusCards}
+            </div>
+
+            <button onclick="renderLevelSelection()" class="w-full mt-8 py-3 font-semibold rounded-lg secondary-button">
+                <-- Change Level
+            </button>
+        `;
+    }
+
+    /**
+     * Starts the workout routine with the chosen focus.
+     * @param {string} focusId - The ID of the chosen focus area.
+     */
+    function startRoutine(focusId) {
+        if (!currentLevelId) return renderLevelSelection();
+        stopRest();
+
+        currentFocusId = focusId;
+        currentExerciseIndex = 0;
+
+        const levelData = allRoutines[currentLevelId];
+        const selectedFocus = levelData.focuses.find(f => f.id === focusId);
+        
+        if (!selectedFocus) {
+            showMessage("Error: Routine focus not found.");
+            return renderLevelSelection();
+        }
+
+        currentWorkoutData = selectedFocus.exercises;
+        renderCurrentExercise();
+    }
+
+
+    /**
+     * Renders the current exercise screen in the flow.
+     */
+    function renderCurrentExercise() {
+        if (!currentLevelId || !currentFocusId || currentWorkoutData.length === 0) {
+            return renderLevelSelection();
+        }
+        stopRest(); // Should be stopped, but safe guard
+
+        const levelData = allRoutines[currentLevelId];
+        const focusData = levelData.focuses.find(f => f.id === currentFocusId);
+        const exercise = currentWorkoutData[currentExerciseIndex];
+
+        mainTitle.textContent = focusData.name;
+
+        contentView.innerHTML = `
+            <div class="text-center mb-6">
+                <span class="text-sm uppercase tracking-widest font-semibold text-gray-500">
+                    EXERCISE ${currentExerciseIndex + 1} of ${currentWorkoutData.length}
+                </span>
+                <p class="text-xs font-medium text-gray-400 mt-1">Level: ${levelData.name}</p>
+            </div>
+
+            <!-- Exercise Display - Minimalist block -->
+            <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+                <h2 class="text-3xl font-extrabold text-white mb-2">${exercise.name}</h2>
+                <p class="text-xl font-bold text-[--accent-color] mb-4">${exercise.reps}</p>
+                <p class="text-sm text-gray-500">Target Muscle Group: ${exercise.target}</p>
+            </div>
+
+            <!-- Flow Buttons -->
+            <div class="mt-10 space-y-4">
+                <button onclick="nextExercise()" class="action-button w-full py-4 text-xl rounded-lg shadow-xl">
+                    COMPLETE SET (Start Rest)
+                </button>
+                <button onclick="stopRest(); renderLevelSelection()" class="w-full py-3 font-semibold rounded-lg secondary-button">
+                    Exit Routine
+                </button>
+            </div>
+            
+            <!-- Flow Reminder -->
+            <div class="mt-8 text-center text-sm text-gray-600">
+                <p class="font-semibold text-gray-500">Flow Reminder:</p>
+                <p>Click 'Complete Set' to start your ${DEFAULT_REST_TIME} second rest.</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Progresses to the next exercise or starts the rest timer.
+     */
+    function nextExercise() {
+        // If there are more exercises, start the rest timer first
+        if (currentExerciseIndex < currentWorkoutData.length - 1) {
+            currentExerciseIndex++; // Increment the index for the *next* exercise
+            startRest(DEFAULT_REST_TIME);
+        } else {
+            // If this was the last exercise, finish the workout
+            finishWorkout();
+        }
+    }
+
+    // Initialize the app view
+    window.onload = renderLevelSelection;
+</script>
+
+</body>
+</html>
